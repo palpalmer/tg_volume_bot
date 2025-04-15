@@ -6,7 +6,7 @@ from telegram import Bot
 from telegram.ext import Updater, CommandHandler
 import sys
 # Твій Telegram токен
-TELEGRAM_TOKEN = '7688373338:AAEmKtl2feOzGGr5t108yOm8KZkHpaCnnOE'
+TELEGRAM_TOKEN = '8189114710:AAHZbxsZgFSVPcxaf633NPTRIlvJNWEv88o'
 CHAT_ID = None
 bot = Bot(token=TELEGRAM_TOKEN)
 
