@@ -131,3 +131,10 @@ def main():
 if __name__ == "__main__":
     main()
 
+import sys
+
+if __name__ == "__main__":
+    if "--send_report" in sys.argv:
+        send_daily_report()
+    else:
+        main()
