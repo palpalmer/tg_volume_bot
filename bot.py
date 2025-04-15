@@ -1,15 +1,18 @@
 import requests
+import schedule
+import time
 from datetime import datetime
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler
 import os
+import sys
 
-# Твій Telegram токен
+# Токен Telegram
 TELEGRAM_TOKEN = '7688373338:AAEmKtl2feOzGGr5t108yOm8KZkHpaCnnOE'
 CHAT_ID = None
 bot = Bot(token=TELEGRAM_TOKEN)
 
-# Завантаження chat_id з файлу
+# ======== CHAT ID =========
 def load_chat_id():
     global CHAT_ID
     try:
@@ -18,16 +21,15 @@ def load_chat_id():
     except FileNotFoundError:
         CHAT_ID = None
 
-# Збереження chat_id
 def save_chat_id(chat_id):
     with open("chat_id.txt", "w") as f:
         f.write(str(chat_id))
 
-# Отримання топ-20 монет з позицій 300–2000 з volume > market_cap
+# ======== DATA FUNCTION =========
 def get_top_movers():
     all_coins = []
 
-    for page in range(2, 9):  # Сторінки 2–8 = монети з 251 до 2000
+    for page in range(2, 9):  # Сторінки 2–8 (позиції 251–2000)
         url = "https://api.coingecko.com/api/v3/coins/markets"
         params = {
             'vs_currency': 'usd',
@@ -43,7 +45,7 @@ def get_top_movers():
         except Exception as e:
             return [f"Error fetching data: {e}"]
 
-    coins_300_2000 = all_coins[49:]  # Пропускаємо 251–299
+    coins_300_2000 = all_coins[49:]  # Від 300 до 2000
 
     movers = []
     for coin in coins_300_2000:
@@ -74,7 +76,7 @@ def get_top_movers():
 
     return formatted
 
-# Відправка звіту вручну (поки без schedule)
+# ======== SENDER =========
 def send_daily_report():
     load_chat_id()
     movers = get_top_movers()
@@ -93,7 +95,7 @@ def send_daily_report():
     else:
         print("CHAT_ID not set. Send /start to bot in Telegram.")
 
-# /start
+# ======== COMMAND: /start =========
 def start(update, context):
     global CHAT_ID
     CHAT_ID = update.effective_chat.id
@@ -103,36 +105,43 @@ def start(update, context):
         "Привіт! Я бот, який щодня відстежує монети, "
         "в яких обсяг торгів перевищує ринкову капіталізацію (з позицій 300–2000).\n\n"
         "Ти будеш отримувати звіт щодня о 16:00.\n\n"
-        "Якщо будуть питання — пиши!"
+        "Щоб отримати звіт вручну — напиши /report."
     )
 
     context.bot.send_message(chat_id=CHAT_ID, text=welcome_message)
 
-# Webhook версія
+# ======== COMMAND: /report =========
+def report(update, context):
+    movers = get_top_movers()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    if not movers:
+        message = f"[{now}] No coins with volume > market cap today."
+    else:
+        message = f"[{now}] Top 20 coins (rank 300–2000) with Volume > Market Cap:\n\n" + "\n".join(movers)
+
+    context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+
+# ======== MAIN =========
 def main():
     load_chat_id()
-    updater = Updater(TELEGRAM_TOKEN)
+    updater = Updater(TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
+
     dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("report", report))
 
-    PORT = int(os.environ.get('PORT', 8443))
-    WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
+    updater.start_polling()
+    print("Bot is running... Waiting for /start.")
 
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TELEGRAM_TOKEN
-    )
-    updater.bot.set_webhook(WEBHOOK_URL)
+    schedule.every().day.at("16:00").do(send_daily_report)
 
-    print(f"Bot is running on webhook: {WEBHOOK_URL}")
-    updater.idle()
 
-if __name__ == "__main__":
-    main()
+while True:
+        schedule.run_pending()
+        time.sleep(10)
 
-import sys
-
+# ======== ENTRY POINT =========
 if __name__ == "__main__":
     if "--send_report" in sys.argv:
         send_daily_report()
