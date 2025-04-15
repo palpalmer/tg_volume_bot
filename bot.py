@@ -1,6 +1,7 @@
 import requests
 import schedule
 import time
+import os
 from datetime import datetime
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler
@@ -129,3 +130,21 @@ def main():
 
 if __name__ == "__main__":
     main()
+def main():
+    updater = Updater(TELEGRAM_TOKEN)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+
+    # Webhook налаштування для Render
+    PORT = int(os.environ.get('PORT', 8443))
+    WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
+
+    updater.start_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TELEGRAM_TOKEN
+    )
+    updater.bot.set_webhook(WEBHOOK_URL)
+
+    print("Bot is running via webhook...")
