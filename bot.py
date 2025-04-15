@@ -1,10 +1,8 @@
 import requests
-import schedule
-import time
-import os
 from datetime import datetime
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler
+import os
 
 # Твій Telegram токен
 TELEGRAM_TOKEN = '7688373338:AAEmKtl2feOzGGr5t108yOm8KZkHpaCnnOE'
@@ -45,7 +43,6 @@ def get_top_movers():
         except Exception as e:
             return [f"Error fetching data: {e}"]
 
-    # Залишаємо монети з позицій 300–2000
     coins_300_2000 = all_coins[49:]  # Пропускаємо 251–299
 
     movers = []
@@ -65,7 +62,6 @@ def get_top_movers():
                 'ratio': ratio
             })
 
-    # Сортування і топ-20
     top_20 = sorted(movers, key=lambda x: x['ratio'], reverse=True)[:20]
 
     formatted = [
@@ -78,7 +74,7 @@ def get_top_movers():
 
     return formatted
 
-# Відправка щоденного звіту
+# Відправка звіту вручну (поки без schedule)
 def send_daily_report():
     load_chat_id()
     movers = get_top_movers()
@@ -97,7 +93,7 @@ def send_daily_report():
     else:
         print("CHAT_ID not set. Send /start to bot in Telegram.")
 
-# Обробка /start
+# /start
 def start(update, context):
     global CHAT_ID
     CHAT_ID = update.effective_chat.id
@@ -112,31 +108,13 @@ def start(update, context):
 
     context.bot.send_message(chat_id=CHAT_ID, text=welcome_message)
 
-# Головна функція
+# Webhook версія
 def main():
     load_chat_id()
-    updater = Updater(TELEGRAM_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-
-    updater.start_polling()
-    print("Bot is running... Waiting for /start.")
-
-    schedule.every().day.at("16:00").do(send_daily_report)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(10)
-
-if __name__ == "__main__":
-    main()
-def main():
     updater = Updater(TELEGRAM_TOKEN)
     dp = updater.dispatcher
-
     dp.add_handler(CommandHandler("start", start))
 
-    # Webhook налаштування для Render
     PORT = int(os.environ.get('PORT', 8443))
     WEBHOOK_URL = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TELEGRAM_TOKEN}"
 
@@ -147,4 +125,9 @@ def main():
     )
     updater.bot.set_webhook(WEBHOOK_URL)
 
-    print("Bot is running via webhook...")
+    print(f"Bot is running on webhook: {WEBHOOK_URL}")
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
+
