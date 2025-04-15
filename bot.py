@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from telegram import Bot
 from telegram.ext import Updater, CommandHandler
-
+import sys
 # Твій Telegram токен
 TELEGRAM_TOKEN = '7688373338:AAEmKtl2feOzGGr5t108yOm8KZkHpaCnnOE'
 CHAT_ID = None
@@ -124,14 +124,6 @@ def main():
     schedule.every().day.at("16:00").do(send_daily_report)
 
     while True:
-        schedule.run_pending()
-        time.sleep(10)
-
-if __name__ == "__main__":
-    main()
-
-
-while True:
         schedule.run_pending()
         time.sleep(10)
 
